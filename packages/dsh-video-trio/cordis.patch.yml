@@ -1,0 +1,13 @@
+# dsh-video-trio 的 bundle patch 层。
+#
+# package.json 的 `dsh.bundle.patch` 指向这个文件：DSH 的 loader 会把它插进 profile 的
+# 组合树（在 bundle 层之后、用户自己的 cordis.patch.yml 之前）。
+#
+# - 顶层是 YAML 数组；`insert` 追加行。
+# - `name` 必须与安装的包名一致，否则 loader 只 warn 然后跳过这一行——
+#   表现就是"插件没生效但不报错"。
+# - `config` 是整行替换而不是深合并：这里刻意不写 config，所有可调项都走
+#   `video-trio.config.json`（包内）或 `$DSH_HOME/dsh-video-trio.json`（用户级）。
+- insert:
+    - id: dsh-video-trio
+      name: dsh-video-trio

@@ -1,0 +1,4 @@
+# pnpm-workspace.yaml
+packages:
+  - "packages/*"
+  - "apps/*"     # 如果以后有可运行的 app 可以保留

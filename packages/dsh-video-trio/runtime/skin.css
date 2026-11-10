@@ -1,0 +1,257 @@
+/*
+ * dsh-video-trio — 注入到 index.html <head> 的样式（结构化注入行的 kind:'style'）。
+ *
+ * 两块：
+ *   ① start 开机动画覆盖层（.dsvt-boot*）
+ *   ② work 聊天背景（#dsvt-backdrop + 界面表面半透明化）
+ *
+ * 表面半透明化的手法（本插件自行验证）：
+ *   - 内核把整套色板定义在 body / body[data-ds-dark-theme] 上，
+ *     改 body 上的 --dsw-alias-bg-base 与 --dsw-specific-sidebar-fill = 一次改到所有面板。
+ *   - 只动"画布/侧栏"（视频就在它们后面），不动"抬起来的表面"(bg-layer-*)。
+ *   - 自定义属性上的 !important 压过主题里的普通声明，不会被后来的主题样式翻盘。
+ */
+
+/* ─────────────── ① start 开机动画覆盖层 ─────────────── */
+
+.dsvt-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  overflow: hidden;
+  display: block;
+  background: radial-gradient(circle at 50% 44%, #0d1a2b 0%, #070b12 62%, #04060a 100%);
+  color: #e8eef6;
+  font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  opacity: 1;
+  transition: opacity var(--dsvt-boot-fade, 900ms) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dsvt-boot[data-state="leaving"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dsvt-boot-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 700ms ease;
+  background: transparent;
+}
+
+.dsvt-boot-video[data-shown="1"] {
+  opacity: 1;
+}
+
+.dsvt-boot-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 92% 86% at 50% 50%, transparent 58%, rgba(3, 7, 13, 0.55) 100%);
+}
+
+.dsvt-boot-ui {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 30px 34px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: #9db8d4;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.6);
+}
+
+/* 跳过按钮：位置/大小全由 JS 行内样式控制（字号、padding、offset） */
+.dsvt-skip {
+  position: absolute;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  line-height: 1;
+  color: #dfeaf7;
+  background: rgba(10, 18, 30, 0.55);
+  border: 1px solid rgba(198, 220, 246, 0.3);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  animation: dsvt-skip-pulse 2.6s ease-in-out infinite;
+  transition: opacity 400ms ease;
+}
+
+.dsvt-skip:hover {
+  background: rgba(30, 48, 72, 0.7);
+}
+
+@keyframes dsvt-skip-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(143, 216, 255, 0); }
+  50% { box-shadow: 0 0 14px 2px rgba(143, 216, 255, 0.38); }
+}
+
+/* ─────────────── ② work 聊天背景（重写版 + 透出修复）─────────────── */
+
+/* 关键：主题把不透明底色画在 body 上（background-color: var(--dsw-alias-bg-base)），
+   背景视频在 z-index:-1 位于 body 之下，body 不透明就把视频彻底盖住 ⇒ 只见黑底。
+   所以必须把 body（及 html）的底色设为 transparent，视频才会透出来。 */
+html[data-dsvt="on"] body {
+  background-color: transparent !important;
+}
+
+/* 背景层：固定铺满、最底层，不挡交互。 */
+#dsvt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: #0e1116;
+}
+#dsvt-backdrop .dsvt-backdrop-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100%;
+  min-height: 100%;
+  max-width: none;
+  max-height: none;
+  /* 填满整个界面：裁切而不是留黑边（部分框架会覆盖 object-fit，用 important 压住）。 */
+  object-fit: cover !important;
+  background: transparent;
+}
+
+/* 表面半透明化 —— 只动"画布/侧栏"，不动"抬起来的表面"(bg-layer-*)。
+   让视频不仅透出空白区，也透过边栏/画布。数值由 JS 按 work.surface 写进 --dsvt-surface*。 */
+html[data-dsvt="on"] body {
+  --dsw-alias-bg-base: rgba(255, 255, 255, var(--dsvt-surface-light, 0.6)) !important;
+  --dsw-specific-sidebar-fill: rgba(249, 250, 251, var(--dsvt-sidebar, var(--dsvt-surface-light, 0.6))) !important;
+}
+html[data-dsvt="on"] body[data-ds-dark-theme] {
+  --dsw-alias-bg-base: rgba(21, 21, 23, var(--dsvt-surface, 0)) !important;
+  --dsw-specific-sidebar-fill: rgba(27, 27, 28, var(--dsvt-sidebar, var(--dsvt-surface-light, 0.3))) !important;
+}
+/* 水波纹画布：盖在背景视频之上、界面之下，不挡交互。 */
+#dsvt-backdrop .dsvt-ripple {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+/* 减弱动效的系统：不播背景视频、也不画水波纹。 */
+@media (prefers-reduced-motion: reduce) {
+  #dsvt-backdrop .dsvt-ripple { display: none; }
+}
+/* 减弱动效的系统：不播背景视频。 */
+@media (prefers-reduced-motion: reduce) {
+  #dsvt-backdrop .dsvt-backdrop-video { display: none; }
+}
+/* ───── 玻璃层（合并自 dsh-video-trio-glass 草稿，20261109-153724）───── */
+/*
+ * dsh-video-trio 玻璃层（草稿，待同步到 runtime/）
+ * 作用：对话气泡 + 输入框卡片做磨砂玻璃（backdrop-filter 模糊 + 半透明 + 玻璃边）。
+ * 参数全部走 CSS 变量，由 glass.js 面板实时写入 <html> 的 style：
+ *   --dsvt-glass-blur    模糊强度 px（0~30）
+ *   --dsvt-glass-alpha   玻璃底色不透明度 0~1
+ *   --dsvt-glass-edge    玻璃边缘高光不透明度 0~1
+ * 只在 html[data-dsvt="on"]（work 背景已开）时生效，关背景则完全不影响界面。
+ */
+
+html[data-dsvt="on"] {
+  --dsvt-glass-blur: 4px;
+  --dsvt-glass-alpha: 0.35;
+  --dsvt-glass-edge: 0.51;
+}
+
+/* 对话气泡 */
+html[data-dsvt="on"] body div[class*="_bubble"] {
+  -webkit-backdrop-filter: blur(var(--dsvt-glass-blur)) saturate(1.15);
+  backdrop-filter: blur(var(--dsvt-glass-blur)) saturate(1.15);
+  background-color: rgba(255, 255, 255, var(--dsvt-glass-alpha)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--dsvt-glass-edge)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, var(--dsvt-glass-edge)), 0 4px 18px rgba(0, 0, 0, 0.08);
+}
+html[data-dsvt="on"] body[data-ds-dark-theme] div[class*="_bubble"] {
+  background-color: rgba(20, 24, 32, var(--dsvt-glass-alpha)) !important;
+  border: 1px solid rgba(255, 255, 255, calc(var(--dsvt-glass-edge) * 0.4)) !important;
+}
+
+/* 输入框卡片（composer） */
+html[data-dsvt="on"] body div[class*="_composer"] div[class*="_card"] {
+  -webkit-backdrop-filter: blur(var(--dsvt-glass-blur)) saturate(1.15);
+  backdrop-filter: blur(var(--dsvt-glass-blur)) saturate(1.15);
+  background-color: rgba(255, 255, 255, var(--dsvt-glass-alpha)) !important;
+}
+html[data-dsvt="on"] body[data-ds-dark-theme] div[class*="_composer"] div[class*="_card"] {
+  background-color: rgba(20, 24, 32, var(--dsvt-glass-alpha)) !important;
+}
+
+/* ───── 悬浮调参面板 ───── */
+#dsvt-glass-toggle {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 2147483000;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(20, 24, 32, 0.55);
+  color: #e8eef6;
+  font-size: 16px;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+#dsvt-glass-panel {
+  position: fixed;
+  right: 14px;
+  bottom: 56px;
+  z-index: 2147483000;
+  width: 240px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(20, 24, 32, 0.75);
+  color: #e8eef6;
+  font: 12px/1.4 system-ui, "Microsoft YaHei", sans-serif;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+#dsvt-glass-panel[hidden] { display: none; }
+#dsvt-glass-panel label { display: block; margin-top: 8px; }
+#dsvt-glass-panel input[type="range"] { width: 100%; }
+#dsvt-glass-panel .dsvt-glass-row { display: flex; justify-content: space-between; }
+
+/* ───── AI 回复文本玻璃层（真实类名 _markdown_，已由 DOM 探针确认）───── */
+html[data-dsvt="on"] body div[class*="_markdown_"] {
+  -webkit-backdrop-filter: blur(var(--dsvt-glass-blur)) saturate(1.15);
+  backdrop-filter: blur(var(--dsvt-glass-blur)) saturate(1.15);
+  background-color: rgba(255, 255, 255, var(--dsvt-glass-alpha)) !important;
+  border: 1px solid rgba(255, 255, 255, var(--dsvt-glass-edge)) !important;
+  border-radius: 12px;
+  padding: 8px 12px;
+  color: #1a1f27 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.35);
+}
+html[data-dsvt="on"] body[data-ds-dark-theme] div[class*="_markdown_"] {
+  background-color: rgba(20, 24, 32, var(--dsvt-glass-alpha)) !important;
+  color: #e8eef6 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}

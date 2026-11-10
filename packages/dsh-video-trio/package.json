@@ -1,0 +1,45 @@
+{
+  "name": "dsh-video-trio",
+  "version": "0.1.0",
+  "description": "DSH 启动/工作/退出三段视频皮肤：start 文件夹启动全屏、work 文件夹工作背景、exit 文件夹退出全屏，支持播放列表多视频顺序/随机，跳过按钮可调大小与位置。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "runtime",
+    "videos",
+    "scripts",
+    "tests",
+    "docs",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "license": "MIT",
+  "author": "DaFeiYv",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "cordis",
+    "video",
+    "background",
+    "boot",
+    "splash",
+    "exit",
+    "wallpaper",
+    "skin"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

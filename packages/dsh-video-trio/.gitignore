@@ -1,0 +1,8 @@
+# 测试用占位视频不随仓库发布（用户自行放入 videos/ 即可）
+videos/start/*.mp4
+videos/work/*.mp4
+videos/exit/*.mp4
+# 备份与临时文件
+*.bak*
+.tmp-smoke/
+.dsh-meow/
