@@ -1,0 +1,40 @@
+node_modules/
+.DS_Store
+*.log
+# 凭据与密钥（禁止入库）
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.kdbx
+id_rsa
+id_ed25519
+*.secret
+secrets.*
+credentials*.json
+.npmrc
+.netrc
+
+# 本地运行数据与记忆库（含个人对话信息）
+.dsh-meow/
+.dsh-memory/
+*.db
+*.db-wal
+*.db-shm
+*.dshmem
+*.dshfake
+memory-backup/
+
+# 备份与临时文件
+*.bak*
+.tmp-smoke/
+.tmp/
+*.tmp
+
+# 测试用大视频素材（如需入库请用 Git LFS 或放到别处）
+videos/**/*.mp4
+videos/**/*.mov
+videos/**/*.webm
